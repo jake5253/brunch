@@ -95,7 +95,8 @@ if [ ! -z "$brunch_debug" ] && [ "$brunch_debug" -eq 1 ]; then
 	exec sh
 fi
 
-if [ ! -z "$edit_brunch_config" ]; then
+# The original edit_brunch_config
+if [ ! -z "$brunch_setup" ]; then
 	echo 0 0 0 0 > /proc/sys/kernel/printk
 	mkdir -p /mnt/stateful_partition/unencrypted/brunch_config
 	mount "$partpath"12 /mnt/stateful_partition/unencrypted/brunch_config
@@ -103,6 +104,33 @@ if [ ! -z "$edit_brunch_config" ]; then
 	umount /mnt/stateful_partition/unencrypted/brunch_config
 	read -p "Press any key to reboot your computer..."
 	exec reboot -f
+fi
+
+if [ ${edit_brunch_config+x} ]; then
+	echo 0 0 0 0 > /proc/sys/kernel/printk
+	mount "$partpath"12 /boot && /brunchmenu/brunch-menu || { echo "boot didn't mount"; drop_to_shell=1; }
+  if [ ${drop_to_shell+x} ]; then
+    cat << EOF
+             You have set drop_to_shell in your boot arguments!
+        If you're having trouble with Brunch Menu, you may try to use
+        the Original Brunch Config editor by typing "brunch-setup" in
+        the following shell.  Failing that, you may want to make sure
+        that /boot is mounted. That should be located at:
+                    "${partpath}12"
+        Try:
+              mkdir -p /boot && mount "${partpath}12" /boot
+        You can find the settings.cfg file in there and edit it with nano
+
+        If you're a hacker, unfortunately, you're S.O.L. You cannot
+        access any encrypted user files from here unless you know
+        the user's password.
+EOF
+    bash
+  else
+    umount /boot
+    exec reboot -f
+  fi
+
 fi
 
 mkdir -p /data /roota /rootc

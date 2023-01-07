@@ -208,8 +208,10 @@ rm -rf ./swtpm-pkg || { echo "Failed to make swtpm package"; exit 1; }
 
 git clone --depth=1 -b master https://github.com/mirror/ncurses.git || { echo "Failed to make ncurses"; exit 1; }
 cd ./ncurses || { echo "Failed to make ncurses"; exit 1; }
-./configure  --prefix=/usr --libdir=/usr/lib64 --with-shared --without-debug --without-normal || { echo "Failed to make ncurses"; exit 1; }
+./configure  --prefix=/usr --libdir=/usr/lib64 --with-shared --without-debug --without-normal --with-termlib || { echo "Failed to make ncurses"; exit 1; }
 make -j"$NTHREADS" || { echo "Failed to make ncurses"; exit 1; }
+# We need these headers later for building kconfig-standalone
+sudo make headers install
 make DESTDIR=/home/chronos/ncurses-pkg install || { echo "Failed to make ncurses"; exit 1; }
 cd ../ncurses-pkg || { echo "Failed to make ncurses"; exit 1; }
 tar zcvf ../rootc/packages/ncurses.tar.gz * --owner=0 --group=0 || { echo "Failed to make ncurses"; exit 1; }
@@ -249,6 +251,16 @@ sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/g' .config || { echo "Faile
 make -j"$NTHREADS" || { echo "Failed to make busybox"; exit 1; }
 cd .. || { echo "Failed to make busybox"; exit 1; }
 
+git clone https://github.com/WangNan0/kbuild-standalone.git || { echo "git kbuild failed"; exit 1; }
+cd kbuild-standalone || { echo "cant cd kbuild"; exit 1; }
+mkdir build || { echo "cant make kbuild build dir"; exit 1; }
+sed -i -e 's/kconfig\/mconf kconfig\/conf/kconfig\/nconf/g' -e 's/fixdep\|unifdef//g' Makefile.sample || { echo "kbuild sed failed"; exit 1; }
+cd build || { echo "cd build no"; exit 1; }
+make -C ../ -f Makefile.sample O="$(pwd)" -j"$NTHREADS" || { echo "kconfig build sadface"; exit 1; }
+cp ./kconfig/nconf ../../initramfs/bin/ || { echo "! cp nconf"; exit 1; }
+cd ../.. || { echo "! go back"; exit 1; }
+rm -rf ./kbuild-standalone || { echo "! rm kbuild-standalone"; exit 1; }
+
 cd initramfs || { echo "Failed to finalise initramfs"; exit 1; }
 mkdir -p bin etc lib64 proc sbin sys tmp usr || { echo "Failed to finalise initramfs"; exit 1; }
 ln -s ./roota/lib ./lib || { echo "Failed to finalise initramfs"; exit 1; }
@@ -273,6 +285,7 @@ for i in $(ldd /usr/bin/ntfsfix | cut -d' ' -f3); do cp "$i" ./lib64/ || { echo 
 cp /usr/bin/ntfsfix ./sbin/ || { echo "Failed to finalise initramfs"; exit 1; }
 for i in $(ldd /sbin/resize2fs | cut -d' ' -f3); do cp "$i" ./lib64/ || { echo "Failed to finalise initramfs"; exit 1; }; done
 cp /sbin/resize2fs ./sbin/ || { echo "Failed to finalise initramfs"; exit 1; }
+for i in $(ldd ./bin/nconf | cut -d' ' -f3); do cp "$i" ./lib64/ || { echo "! nconf libs"; exit 1; }; done
 cp /lib64/ld-linux-x86-64.so.2 ./lib64/ || { echo "Failed to finalise initramfs"; exit 1; }
 cp /usr/lib64/libgcc_s.so.1 ./lib64/ || { echo "Failed to finalise initramfs"; exit 1; }
 sudo chmod 0755 ./sbin/* || { echo "Failed to finalise initramfs"; exit 1; }

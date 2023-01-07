@@ -77,4 +77,8 @@ chmod 0755 /roota/usr/sbin/edit-brunch-config
 if [ ! "$?" -eq 0 ]; then ret=$((ret + (2 ** 3))); fi
 ln -s edit-brunch-config /roota/usr/sbin/edit-grub-config
 if [ ! "$?" -eq 0 ]; then ret=$((ret + (2 ** 4))); fi
+cp brunchmenu/brunch-menu /roota/usr/sbin/brunch-menu || ret=$((ret + (2 ** 5)))
+chmod 0755 /roota/usr/sbin/brunch-menu || ret=$((ret + (2 ** 6)))
+mkdir -p /roota/usr/share/brunchmenu || ret=$((ret + (2 ** 7)))
+cp brunchmenu/brunch.in /roota/usr/share/brunchmenu/brunch.in || ret=$((ret + (2 ** 8)))
 exit $ret

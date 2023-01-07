@@ -1,0 +1,192 @@
+#!/bin/busybox sh
+trap "" SIGINT #You're stuck now
+
+if [[ ! $EUID -eq 0 ]]; then
+	echo "This script MUST be run by the root user or using sudo"
+	exit
+fi
+
+export PATH=/sbin:/bin:$PATH
+export LD_LIBRARY_PATH=/lib:/lib64
+export TERMINFO=/usr/share/terminfo/
+export TERM=xterm-color
+
+
+TMP_DIR=$(mktemp -d)
+export TMP_DIR
+bbdate=$(date -I'minutes' | sed -e 's/[:|T]/_/g')
+settings_backup=/boot/efi/boot/settings-${bbdate}.cfg.bak
+settings_file=/boot/efi/boot/settings.cfg
+cmdline_params=""
+kernel=""
+brunch_bootsplash=""
+options=""
+verbose=0
+
+function cleanup() {
+	sync
+	exit
+}
+
+function die() {
+    echo "$@" >&2
+    if [[ ${drop_to_shell+x} ]]; then
+      read -rn 1 -p "Press [ENTER] to start an interactive shell"
+      exit
+    fi
+    cat << EOF
+      Your system may in an unbootable state. If this is the case,
+        in the boot menu, [arrow down] to Brunch Settings, press [e],
+        and add "drop_to_shell=1" to the list of command line
+        arguments, then press [CTRL + X] to get back here. If it
+        fails again, you'll be dropped to a Bash shell where you
+        can poke around. Once there, you can fix things manually.
+        Good luck!
+EOF
+    read -rn 1 -p "Got all that? Press any key to reboot."
+    echo ""
+    exit
+}
+
+function settingstodotconfig() {
+	# shellcheck disable=SC1090
+	source $settings_file
+
+	#KERNEL
+	# shellcheck disable=SC2001
+	K=$(echo "${kernel:1}" | sed -e 's/[\.|\-]/\_/g')
+	echo "CONFIG_${K^^}=y"
+
+	#OPTIONS
+	# shellcheck disable=SC2001
+	O=$(echo "${options}" | sed -e 's/,/ /g')
+	for fo in $O; do
+		echo "CONFIG_OPTION_${fo^^}=y"
+	done
+
+	#CMDLINE
+	for c in $cmdline_params; do
+		CMD=$(echo "$c" | cut -d'=' -f1)
+		echo "CONFIG_CMD_${CMD^^}=y"
+	done
+
+	#VERBOSE
+	if [[ $verbose -eq 1 ]]; then
+		echo "CONFIG_VERBOSE=y"
+	fi
+
+	#BOOTSPLASH
+	if [[ $verbose -eq 0 ]]; then
+		echo "CONFIG_BOOTSPLASH=y"
+		echo "CONFIG_SPLASH_${brunch_bootsplash^^}=y"
+	fi
+	unset cmdline_params kernel brunch_bootsplash options verbose
+}
+
+function dotconfigtosettings() {
+	while read -r LINE; do
+		case "${LINE:7:1}" in
+			C) #COMMAND_LINE
+				unset cmd key value
+				local cmd="${LINE:11}"
+				local key="${cmd%%=*}"
+				if [[ "$key" == EXTRA_BOOT_FLAGS ]]; then
+					local value="${cmd:18:-1}"
+				else
+					local value="${cmd#*=}"
+				fi
+				case "$key" in
+					ENFORCE_HYPERTHREADING)
+						export cmdline_params+="enforce_hyperthreading=1 "
+						;;
+					INTEL_DSP_DRIVER)
+						export cmdline_params+="snd-intel-dspcfg.dsp_driver=1 "
+						;;
+					I915_FBC)
+						export cmdline_params+="i915.enable_fbc=0 i915.enable_psr=0 "
+						;;
+					I915_PSR)
+						continue
+						;;
+					ELANTECH)
+						export cmdline_params+="psmouse.elantech_smbus=1 "
+						;;
+					SYNAPTICS)
+						export cmdline_params+="psmouse.synaptics_intertouch=1 "
+						;;
+					EXTRA_BOOT_FLAGS)
+						export cmdline_params+="$value "
+						;;
+					esac
+					;;
+			K) #KERNEL
+				# shellcheck disable=SC2001
+				local strip="$(echo "${LINE/CONFIG_KERNEL_/KERNEL-}" | sed -e 's/_/\./g')"
+				export kernel="/${strip,,}"
+				;;
+			O) #OPTION
+				local strip="${LINE#CONFIG_OPTION_}"
+				export options+="${strip,,},"
+				;;
+			S) #SPLASH
+				local strip="${LINE#CONFIG_SPLASH_}"
+				export brunch_bootsplash="${strip,,}"
+				;;
+			V) #VERBOSE
+				export verbose=1
+				;;
+		esac
+	done < <(grep -Ev '^(\s)?#|^$' "$TMP_DIR/.config" | sed -e 's/=y$//g')
+}
+
+function fillsettingstemplate() {
+	cat << EOF | tee "$TMP_DIR/settings.cfg" >/dev/null
+#
+#
+# This configuration file was automatically generated
+# DO NOT EDIT
+# Please use 'brunch_menu' to make configuration changes
+#
+#
+options="${options%,}"
+kernel="$kernel"
+cmdline_params="$cmdline_params"
+verbose="$verbose"
+brunch_bootsplash="$brunch_bootsplash"
+EOF
+}
+
+
+########
+# MAIN
+########
+
+if [[ -f $settings_file ]]; then
+  echo "Getting current settings"
+  settingstodotconfig | tee "$TMP_DIR/.config"
+  if [[ $( find /boot/efi/boot/ -name '*.bak' | busybox wc -l ) -ge 5 ]]; then
+    echo "There are 5 old settings (backups)."
+    read -rn1 -p "Would you like to clear them? [Y|n] "
+    if [[ ! "$REPLY" =~ n|N  ]]; then
+      rm /boot/efi/boot/*.cfg.bak
+      echo "Deleted"
+    fi
+    unset REPLY
+  fi
+  cp $settings_file $settings_backup
+else
+  die "The settings file does not exist! We 'can' proceed, but you won't be able to save your changes. Exiting."
+fi
+
+cd "$TMP_DIR" || die 'Temp dir is not accessible. Stopping.'
+[[ -d /brunchmenu ]] && {
+  nconf /brunchmenu/brunch.in || die "Unable to launch Brunch Menu! Giving up.";
+} || nconf /usr/share/brunchmenu/brunch.in
+dotconfigtosettings
+fillsettingstemplate
+mv "$TMP_DIR/settings.cfg" "$settings_file" || die "Gah! All we needed was to move the config file into place. Sadface"
+clear
+cat $settings_file | tail -n 5
+read -rn1 -p "These are your new settings. Press any key to reboot."
+echo ""
+cleanup

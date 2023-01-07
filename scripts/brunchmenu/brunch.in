@@ -1,0 +1,409 @@
+mainmenu "Brunch Setup"
+
+choice KERNEL
+	prompt "Kernel"
+	#default $(shell,/usr/bin/uname -r | cut -d. -f-2 | sed -e 's/\./\_/g')
+	default KERNEL_5_15
+	help 
+		Brunch has several precompiled kernels avaliable for users.
+		If you are unsure, choose Kernel v5.15
+		WARNING: Changing your kernel can prevent you from logging into your ChromeOS account, 
+		in which case a powerwash is the only solution (Ctrl + Alt + Shift + R at the login screen). 
+		Before switching to a different kernel, make sure you have a backup of all your data. 
+
+	config KERNEL_5_15
+		bool "Kernel v5.15"
+	config KERNEL_5_10
+		bool "Kernel v5.10"
+	config KERNEL_5_4
+		bool "Kernel v5.4"
+	config KERNEL_4_19
+		bool "Kernel v4.19"
+	config KERNEL_MACBOOK
+		bool "Macbook Kernel"
+	config KERNEL_CHROMEBOOK_5_4
+		bool "Chromebook Kernel v5.4"
+	config KERNEL_CHROMEBOOK_4_14
+		bool "Chromebook Kernel v4.14"
+	config KERNEL_CHROMEBOOK_4_4
+		bool "Chromebook Kernel v4.4"
+endchoice
+
+
+menu "Framework Options"
+	comment "These options act as patches and can be used to add more features or support to your installation."
+
+	config OPTION_ENABLE_UPDATES
+		bool "Allow Chrome OS OTA updates"
+		default n
+		help 
+			allow native ChromeOS updates (use at your own risk: ChromeOS will be updated but not the Brunch framework/kernel which might render your ChromeOS install unstable or even unbootable).
+
+	config OPTION_PWA
+		bool "Enable PWA"
+		default n
+		help
+			Enables the brunch PWA. See https://sebanc.github.io/brunch-pwa/ for more information.
+
+	config OPTION_ANDROID_INIT_FIX
+		bool "Fix for Android init"
+		default n
+		help
+			Alternative init to support devices on which the android container fails to start with the standard init
+
+	config OPTION_ANDROID_INIT_FIX2
+		bool "Alternative Fix for Android init"
+		default n
+		help
+			Another alternative init to support devices on which the android container fails to start with the standard init or the other alternative init fix
+
+	config OPTION_MOUNT_INTERNAL_DRIVES
+		bool "Mount internal storage"
+		default n
+		help
+			Allow automatic mounting of HDD partitions in ChromeOS. Name will come from partition label if present \
+		    	NOTE: Android media server will scan those drives which will cause high CPU usage until it has finished, it might take hours depending on your data
+
+	config OPTION_DISABLE_SDCARD_STORAGE
+		bool "Disable SDcard storage"
+		default n
+
+	config OPTION_DISABLE_USB_STORAGE
+		bool "Disable USB storage"
+		default n
+
+	config OPTION_CHROMEBOOK_AUDIO
+		bool "Enable audio on EOL Chromebook"
+		default n
+		help
+			Enable audio on EOL chromebook devices using the brunch recommended recovery image
+
+	config OPTION_NATIVE_CHROMEBOOK_IMAGE
+		bool "Enable Brunch on Official Recovery"
+		default n
+		help
+			Enable to use Brunch on a non-EOL chromebook using its official recovery image
+
+	config OPTION_NO_CAMERA_CONFIG
+		bool "Disable camera config"
+		default n
+		help
+			Disable camera config. If your camera does not work, try this option.
+
+	config OPTION_INVERT_CAMERA_ORDER
+		bool "Swap camera order"
+		default n
+		help
+			Use this option if your camera order is inverted
+
+	config OPTION_ACPI_POWER_BUTTON
+		bool "ACPI power button"
+		default n
+		help
+			Use this option if long pressing the power button does not display the power menu
+
+	config OPTION_ALT_TOUCHPAD_CONFIG
+		bool "Alternative touchpad config"
+		default n
+		help
+			Use this option if you have problems with your touchpad
+
+	config OPTION_ALT_TOUCHPAD_CONFIG2
+		bool "Second alternative touchpad config"
+		depends on !ALT_TOUCHPAD_CONFIG
+		default n
+		help
+			Use this option if you still have problems with your touchpad
+
+	config OPTION_ALT_TOUCHPAD_CONFIG3
+		bool "Third alternative touchpad config"
+		depends on !ALT_TOUCHPAD_CONFIG2
+		default n
+		help
+			Use this option if you still have problems with your touchpad and the other configs did not fix it
+
+	config OPTION_TOUCHPAD_RESUME_FIX
+		bool "Touchpad resume fix"
+		default n
+
+	config OPTION_INTERNAL_MIC_FIX
+		bool "Fix interal mic"
+		default n
+		help
+			Fix the internal mic on some devices
+
+	config OPTION_INTERNAL_MIC_FIX2
+		bool "Alternative internal mic fix"
+		depends on !INTERNAL_MIC_FIX
+		default n
+		help
+			Alternative fix for the internal mic on some devices
+
+	config OPTION_SYSFS_TABLET_MODE
+		bool "Control Tablet Mode from sysfs"
+		default n
+		help
+			Allows manually controlling Tablet Mode by writing 0 
+			or 1 in /sys/bus/platform/devices/tablet_mode_switch.0/tablet_mode
+
+	config OPTION_FORCE_TABLET_MODE
+		bool "Force Tablet Mode at boot"
+		depends on !SYSFS_TABLET_MODE
+		default n
+		help
+			Same as above, Allows controlling Tablet Mode by changing values in sysfs,
+			except Tablet Mode is enabled at boot by default
+
+	config OPTION_SUSPEND_S3
+		bool "Suspend to S3"
+		default n
+		help
+			Disables suspend to idle (S0ix) and use S3 suspend instead
+
+	config OPTION_ADVANCED_ALS
+		bool "More auto-brightness levels"
+		default n
+		help
+			This option activates more auto-brightness levels (based on the Pixel Slate implementation)
+endmenu
+
+menu "Wireless/Bluetooth"
+	config OPTION_BROADCOM_WL
+		bool "Broadcom_wl Module"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this if you need the broadcom_wl module,
+	config OPTION_RTL8188EU
+		bool "rtl8188eu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8188eu wireless card/adapter
+
+	config OPTION_RTL8188FU
+		bool "rtl8188fu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8188fu wireless card/adapter
+
+	config OPTION_RTL8192EU
+		bool "rtl8192eu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8192eu wireless card/adapter
+
+	config OPTION_RTL8723BU
+		bool "rtl8723bu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8723bu wireless card/adapter
+
+	config OPTION_RTL8723DU
+		bool "rtl8723du"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8723du wireless card/adapter
+
+	config OPTION_RTL8812AU
+		bool "rtl8812au"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8812au wireless card/adapter
+
+	config OPTION_RTL8814AU
+		bool "rtl8814au"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8814au wireless card/adapter
+
+	config OPTION_RTL8821CE
+		bool "rtl8821ce"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8821ce wireless card/adapter
+
+	config OPTION_RTL8821CU
+		bool "rtl8821cu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8821cu wireless card/adapter
+
+	config OPTION_RTL8723DE
+		bool "rtl8723de"
+		depends on KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8723de wireless card/adapter
+
+	config OPTION_RTL88X2BU
+		bool "rtl88x2bu"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl88x2bu wireless card/adapter
+
+	config OPTION_RTL8852AE
+		bool "rtl8852ae"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a rtl8852ae wireless card/adapter
+
+	config OPTION_RTBTH
+		bool "RT3290/RT3298LE bluetooth"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if you have a RT3290/RT3298LE bluetooth device
+
+	config OPTION_IWLWIFI_BACKPORT
+		bool "Intel wireless backport"
+		depends on KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Enable this option if your intel wireless card is not supported natively in the kernel
+
+endmenu
+
+menu "Touchscreen"
+
+	config OPTION_GOODIX
+		bool "Goodix Touchscreen"
+		depends on KERNEL_5_10 || KERNEL_5_4 || KERNEL_4_19
+		default n
+		help
+			Improve touchscreen support on Goodix devices
+
+	config OPTION_IPTS_TOUCHSCREEN
+		bool "Surface touchscreen support"
+		depends on KERNEL_5_15 || KERNEL_5_10 || KERNEL_4_19
+		default n
+		help
+			Enable touchscreen support for Microsoft Surface devices
+
+	config OPTION_ITHC_TOUCHSCREEN
+		bool "ithc touchscreen"
+		depends on KERNEL_5_15 || KERNEL_5_10
+		default n
+endmenu
+
+
+menu "Boot flags"
+	comment "These are optional parameters that are not needed by every user. Some commonly used options are selectable, others can be input manually."
+
+		config CMD_ENFORCE_HYPERTHREADING
+			bool "enforce_hypthreading=1"
+			default n
+			help
+				Improve performance by disabling a ChromeOS security feature and forcing hyperthreading everywhere (even in crositini).
+
+		config CMD_INTEL_DSP_DRIVER
+			bool "snd-intel-dspcfg.dsp_driver=1"
+			default n
+
+		config CMD_I915_FBC
+			bool "i915.enable_fbc=0 i915.enable_psr=0"
+			default n
+			select CMD_I915_PSR
+			help
+				Enable if you want to use crouton (needed with kernel 5.4)
+
+		config CMD_I915_PSR
+		    bool
+			default y if I915_FBC
+
+		config CMD_ELANTECH
+			bool "psmouse.elantech_smbus=1"
+			default n
+			help
+				Fix for some elantech touchpads
+
+		config CMD_SYNAPTICS
+			bool "psmouse.synaptics_intertouch=1"
+			default n
+			help
+				enables gestures with more than 2 fingers on some Synaptics touchpad models.
+
+		config CMD_EXTRA_BOOT_FLAGS
+			string "Additional Boot Flags"
+
+endmenu
+
+
+choice BOOTMODE
+	prompt "Boot Mode"
+	default BOOTSPLASH
+	help
+		Enable verbose boot or select bootsplash
+
+	config VERBOSE
+		bool "Enable Verbose boot mode"
+		help
+			Enabling this boot option will disable any selected Brunch Bootsplash and display a log while booting. 
+			This is particularly useful for debugging and solving issues that may prevent your system from booting. 
+
+	config BOOTSPLASH
+		bool "Show Bootsplash"
+		help
+			Display a graphic during system boot
+endchoice
+
+choice SPLASH
+	prompt "Bootsplash"
+	default SPLASH_DEFAULT_DARK
+	depends on BOOTSPLASH
+	help
+		Choose bootsplash style
+
+	config SPLASH_DEFAULT_DARK
+		bool "Default [DARK]"
+	config SPLASH_DEFAULT_LIGHT
+		bool "Default [LIGHT]"
+	config SPLASH_BLANK
+		bool "[BLANK] (Just a black screen)"
+	config SPLASH_BRUNCHBOOK_DARK
+		bool "Brunchbook [DARK]"
+	config SPLASH_BRUNCHBOOK_LIGHT
+		bool "Brunchbook [LIGHT]"
+	config SPLASH_COLORFUL_DARK
+		bool "Colorful [DARK]"
+	config SPLASH_COLORFUL_LIGHT
+		bool "Colorful [LIGHT]"
+	config SPLASH_CROISSANT_DARK
+		bool "Croissant [DARK]"
+	config SPLASH_CROISSANT_LIGHT
+		bool "Croissant [LIGHT]"
+	config SPLASH_NEON_BLUE_DARK
+		bool "Neon Blue [DARK]"
+	config SPLASH_NEON_BLUE_LIGHT
+		bool "Neon Blue [LIGHT]"
+	config SPLASH_NEON_GREEN_DARK
+		bool "Neon Green [DARK]"
+	config SPLASH_NEON_GREEN_LIGHT
+		bool "Neon Green [LIGHT]"
+	config SPLASH_NEON_PINK_DARK
+		bool "Neon Pink [DARK]"
+	config SPLASH_NEON_PINK_LIGHT
+		bool "Neon Pink [LIGHT]"
+	config SPLASH_NEON_RED_DARK
+		bool "Neon Red [DARK]"
+	config SPLASH_NEON_RED_LIGHT
+		bool "Neon Red [LIGHT]"
+	config SPLASH_BRUNCH-logo-dark
+		bool "Brunch Logo [DARK]"
+	config SPLASH_BRUNCH-logo-light
+		bool "Brunch Logo [LIGHT]"
+	config SPLASH_SIMPLE-dark
+		bool "Simple [DARK]"
+	config SPLASH_SIMPLE-light
+		bool "Simple [LIGHT]"
+endchoice
